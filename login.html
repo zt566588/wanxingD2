@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>晚星公会Raid_Rougelike</title>
+    <style>
+      body {
+            background-color: #21252b;
+            color: #ffffff;
+            font-family: 'Microsoft YaHei', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+        }
+
+        input {
+            margin: 10px 0;
+            padding: 10px;
+            width: 200px;
+            border-radius: 5px;
+            border: 1px solid #61dafb;
+            background-color: #282c34;
+            color: white;
+        }
+
+        button {
+            background-color: #61dafb;
+            color: black;
+            border: none;
+            border-radius: 10px;
+            padding: 10px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #21a1f1;
+        }
+    </style>
+
+    <script src="//static.cloudbase.net/cloudbase-js-sdk/2.8.35/cloudbase.full.js"></script>
+    <!-- 内核 -->
+    <script src="//static.cloudbase.net/cloudbase-js-sdk/2.8.35/cloudbase.js"></script>
+    <!-- 登录模块 -->
+    <script src="//static.cloudbase.net/cloudbase-js-sdk/2.8.35/cloudbase.auth.js"></script>
+    <!-- 云函数模块 -->
+    <script src="//static.cloudbase.net/cloudbase-js-sdk/2.8.35/cloudbase.functions.js"></script>
+    <!-- 云存储模块 -->
+    <script src="//static.cloudbase.net/cloudbase-js-sdk/2.8.35/cloudbase.storage.js"></script>
+    <!-- 云数据库模块 -->
+    <script src="//static.cloudbase.net/cloudbase-js-sdk/2.8.35/cloudbase.database.js"></script>
+    <!-- 实时推送模块，引入前必须首先引入云数据库模块 -->
+    <script src="//static.cloudbase.net/cloudbase-js-sdk/2.8.35/cloudbase.realtime.js"></script>
+    <!-- 广告上报模块-->
+    <script src="//static.cloudbase.net/cloudbase-js-sdk/2.8.35/cloudbase.analytics.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>晚星公会Raid_Rougelike</h1>
+      <!-- 注册表单 -->
+      <div>
+        <h2>手机号注册</h2>
+        <form onsubmit="event.preventDefault(); registerWithPhone();">
+          <div style="display: flex; align-items: center; justify-content: center; width: 100%">
+            <div style="width: 75%">
+              <label for="register-phone">手机号：</label>
+              <input type="text" id="register-phone" required />
+            </div>
+            <button type="button" onclick="sendVerificationCode()" class="verification-btn">发送验证码</button>
+          </div>
+
+          <br />
+          <label for="verification-code">验证码：</label>
+          <input type="text" id="verification-code" required />
+          <br />
+          <div style="display: flex; justify-content: center;">
+          <button type="submit">注册</button>
+          </div>
+        </form>
+      </div>
+      <hr />
+      <!-- 登录表单 -->
+      <div>
+        <h2>登录</h2>
+        <form onsubmit="event.preventDefault();login();">
+          <label for="login-phone">手机号：</label>
+          <input type="text" id="login-phone" required />
+          <button type="button" onclick="loginSendVerificationCode()" class="verification-btn">发送验证码</button>
+          <br />
+          <label for="login-verification-code">验证码：</label>
+          <input type="text" id="login-verification-code" required />
+          <br />
+          <div style="display: flex; justify-content: center;">
+          <button type="submit">登录</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </body>
+  <script>
+    // 初始化 CloudBase
+    const app = cloudbase.init({
+      env: 'destiny2-tool-5g3lbvpa4e3442db', // 替换为你的环境 ID
+      clientId: '' // 替换为你的应用 ID
+    })
+
+    // 获取认证模块
+    const auth = app.auth()
+
+    // 注册
+    let verification = {}
+    let phoneNumber = ''
+    let verificationCode = ''
+    let verificationTokenRes = {}
+
+    // 登录
+    let verificationLogin = {}
+    let phoneNumberLogin = ''
+    let verificationCodeLogin = ''
+    let verificationTokenResLogin = {}
+
+    // 1. 注册发送手机验证码
+    async function sendVerificationCode() {
+      phoneNumber = document.getElementById('register-phone').value
+      verification = await auth.getVerification({
+        phone_number: '+86 ' + phoneNumber
+      })
+      if (verification.verification_id) {
+        alert('验证码已发送！')
+      } else {
+        alert('发送验证码失败')
+      }
+    }
+
+    // 2. 注册验证码验证
+    async function registerWithPhone() {
+      verificationCode = document.getElementById('verification-code').value
+      // 验证验证码的正确性
+      try {
+        verificationTokenRes = await auth.verify({
+          verification_id: verification.verification_id,
+          verification_code: verificationCode
+        })
+        if (verificationTokenRes.verification_token) {
+          phoneRegister()
+        }
+      } catch (error) {
+        alert(error.error_description)
+      }
+    }
+
+    // 3. 注册手机号
+    async function phoneRegister() {
+      try {
+        const registRes = await auth.signUp({
+          phone_number: '+86 ' + phoneNumber,
+          verification_code: verificationCode,
+          verification_token: verificationTokenRes.verification_token
+        })
+        console.log('注册结果===>', registRes)
+        alert('注册成功')
+      } catch (error) {
+        alert('注册失败：', error.error_description)
+      }
+    }
+
+    // 4.登录发送手机验证码
+    async function loginSendVerificationCode() {
+      phoneNumberLogin = document.getElementById('login-phone').value
+      verificationLogin = await auth.getVerification({
+        phone_number: '+86 ' + phoneNumberLogin
+      })
+      console.log('登录发送验证码', verificationLogin)
+      if (verificationLogin.verification_id) {
+        alert('验证码已发送！')
+      } else {
+        alert('发送验证码失败')
+      }
+    }
+
+    // 5.登录验证码验证
+    async function login() {
+      verificationCodeLogin = document.getElementById('login-verification-code').value
+      // 验证验证码的正确性
+      try {
+        verificationTokenResLogin = await auth.verify({
+          verification_id: verificationLogin.verification_id,
+          verification_code: verificationCodeLogin
+        })
+        console.log('登录验证码是否正确verificationTokenResLogin', verificationTokenResLogin)
+        if (verificationTokenResLogin.verification_token) {
+          phoneLogin()
+        }
+      } catch (error) {
+        console.log('222')
+        alert(error ? error.error_description : '')
+      }
+    }
+
+    // 6. 登录手机号
+    async function phoneLogin() {
+      try {
+        const registRes = await auth.signIn({
+          username: '+86 ' + phoneNumberLogin,
+          verification_token: verificationTokenResLogin.verification_token
+        })
+        console.log('登录结果===>', registRes)
+        alert('登录成功')
+        setTimeout(() => {
+          window.location.href = './main_new.html'
+        }, 1000)
+      } catch (error) {
+        alert('登录失败：', error.error_description)
+      }
+    }
+
+    const loginState = app.auth().hasLoginState()
+    if (loginState) {
+      console.log('登录态有效')
+      window.location.href = './main_new.html'
+    } else {
+      console.log('没有登录态，或者登录态已经失效')
+    }
+  </script>
+</html>

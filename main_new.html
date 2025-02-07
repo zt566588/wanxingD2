@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>晚星 Destiny2 Rogue-like</title>
+    <style>
+        body {
+            background-color: #21252b;
+            color: #ffffff;
+            font-family: 'Microsoft YaHei', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .selector {
+            margin: 20px;
+            padding: 10px;
+            border: 1px solid #61dafb;
+            border-radius: 10px;
+            background-color: #282c34;
+            width: 300px;
+            display: none; /* 初始隐藏 */
+        }
+        button {
+            background-color: #61dafb;
+            color: black;
+            border: none;
+            border-radius: 10px;
+            padding: 10px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #21a1f1;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #61dafb;
+            border-radius: 10px;
+            background-color: #282c34;
+            width: 500px;
+            height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+
+    <script src="//static.cloudbase.net/cloudbase-js-sdk/2.8.35/cloudbase.full.js"></script>
+    <script>
+        // 初始化 CloudBase
+        const app = cloudbase.init({
+            env: 'destiny2-tool-5g3lbvpa4e3442db', // 替换为你的环境 ID
+            clientId: '' // 替换为你的应用 ID
+        });
+
+        // 获取认证模块
+        const auth = app.auth();
+
+        // 注销功能
+        async function logout() {
+            try {
+                await auth.signOut(); // 注销
+                alert('注销成功！');
+                window.location.href = './login.html'; // 返回登录页面
+            } catch (error) {
+                alert('注销失败：' + error.error_description);
+            }
+        }
+    </script>
+
+</head>
+<body>
+    <h1>晚星 Destiny2 Rogue-like</h1>
+
+    <div id="characterSelector" class="selector">
+        <h2>选择职业:</h2>
+        <select id="characterSelect">
+            <option value="猎人">猎人</option>
+            <option value="泰坦">泰坦</option>
+            <option value="术士">术士</option>
+        </select>
+        <button id="confirmCharacter">选择职业</button>
+    </div>
+
+    <div id="branchSelector" class="selector">
+        <h2>选择分支:</h2>
+        <select id="branchSelect">
+            <option value="棱镜">棱镜</option>
+            <option value="虚空">虚空</option>
+            <option value="烈日">烈日</option>
+            <option value="电弧">电弧</option>
+            <option value="冰影">冰影</option>
+            <option value="缚丝">缚丝</option>
+        </select>
+        <button id="confirmBranch">选择分支</button>
+    </div>
+
+    <div id="classSkillSelector" class="selector">
+        <h2>选择职业技能:</h2>
+        <button id="selectClassSkill">随机选择职业技能</button>
+    </div>
+
+    <div id="superAbilitySelector" class="selector">
+        <h2>选择超能:</h2>
+        <button id="selectSuperAbility">随机选择超能</button>
+    </div>
+
+    <div id="movementSkillSelector" class="selector">
+        <h2>选择位移技能:</h2>
+        <button id="selectMovementSkill">随机选择位移技能</button>
+    </div>
+
+    <div id="meleeSkillSelector" class="selector">
+        <h2>选择近战技能:</h2>
+        <button id="selectMeleeSkill">随机选择近战技能</button>
+    </div>
+
+    <div id="grenadeSkillSelector" class="selector">
+        <h2>选择手雷技能:</h2>
+        <button id="selectGrenadeSkill">随机选择手雷技能</button>
+    </div>
+
+    <div id="starSelector" class="selector">
+        <h2>可随机到的星相:</h2>
+        <div id="starDisplay"></div> <!-- 用于显示随机选择的星相 -->
+        <button id="selectStar">随机选择星相</button>
+    </div>
+    
+
+    <div id="fragmentSelector" class="selector">
+        <h2>可随机到的碎片:</h2>
+        <div id="fragmentDisplay"></div> <!-- 用于显示随机选择的碎片 -->
+        <button id="selectFragment">确认选择碎片</button>
+    </div>
+
+    <div id="result"></div>
+
+    <button id="resetButton">重置</button>
+    <button id="extractRandomEntry">抽取随机词条</button>
+    <button onclick="logout()">注销</button> <!-- 注销按钮 -->
+
+
+    <script>
+        const starDict = {
+            '猎人': {
+                '棱镜': [
+                    {'name': '潇洒行刑者', 'slots': 2},
+                    {'name': '飞升', 'slots': 3},
+                    {'name': '火药博弈', 'slots': 3},
+                    {'name': '严冬帷幕', 'slots': 3},
+                    {'name': '线织幽灵', 'slots': 3}
+                ],
+                '虚空': [
+                    {'name': '捕猎者的伏击', 'slots': 2},
+                    {'name': '隐身步法', 'slots': 2},
+                    {'name': '潇洒行刑者', 'slots': 2}
+                ],
+                '烈日': [
+                    {'name': '击败他们', 'slots': 2},
+                    {'name': '各就各位', 'slots': 3},
+                    {'name': '火药博弈', 'slots': 2},
+                ],
+                '电弧': [
+                    {'name': '流动状态', 'slots': 2},
+                    {'name': '裂空打击', 'slots': 2},
+                    {'name': '致命电流', 'slots': 2},
+                    {'name': '飞升', 'slots': 2}
+                ],
+                '冰影': [
+                    {'name': '严冬帷幕', 'slots': 2},
+                    {'name': '破碎俯冲', 'slots': 2},
+                    {'name': '冷酷收割', 'slots': 3},
+                    {'name': '冬日之触', 'slots': 2}
+                ],
+                '缚丝': [
+                    {'name': '寡妇之丝', 'slots': 2},
+                    {'name': '诱捕猛击', 'slots': 2},
+                    {'name': '线织幽灵', 'slots': 2},
+                    {'name': '回旋漩涡', 'slots': 2}
+                ]
+            },
+            // 其他职业...
+            '泰坦': {
+                '棱镜': [
+                    {'name': '坚不可摧', 'slots': 3},
+                    {'name': '神圣献祭', 'slots': 3},
+                    {'name': '重击', 'slots': 2},
+                    {'name': '钻石长矛', 'slots': 3},
+                    {'name': '勇士之鞭', 'slots': 3}
+                ],
+                '虚空': [
+                    {'name': '克制破坏', 'slots': 2},
+                    {'name': '堡垒', 'slots': 2},
+                    {'name': '进攻堡垒', 'slots': 2},
+                    {'name': '坚不可摧', 'slots': 2}
+                ],
+                '烈日': [
+                    {'name': '咆哮烈焰', 'slots': 2},
+                    {'name': '无敌索尔', 'slots': 2},
+                    {'name': '神圣献祭', 'slots': 2}
+                ],
+                '电弧': [
+                    {'name': '暴雷之触', 'slots': 2},
+                    {'name': '无畏护甲', 'slots': 2},
+                    {'name': '重击', 'slots': 2}
+                ],
+                '冰影': [
+                    {'name': '寒冰断破', 'slots': 2},
+                    {'name': '构造收割', 'slots': 2},
+                    {'name': '风暴怒吼', 'slots': 2},
+                    {'name': '钻石长矛', 'slots': 3}
+                ],
+                '缚丝': [
+                    {'name': '投身激战', 'slots': 2},
+                    {'name': '勇士之鞭', 'slots': 2},
+                    {'name': '镖弹风暴', 'slots': 2},
+                    {'name': '战争旗帜', 'slots': 2}
+                ]
+            },
+            '术士': {
+                '棱镜': [
+                    {'name': '地狱火', 'slots': 3},
+                    {'name': '虚空供养', 'slots': 2},
+                    {'name': '闪电激涌', 'slots': 3},
+                    {'name': '凄凉观察者', 'slots': 3},
+                    {'name': '编织者之唤', 'slots': 3}
+                ],
+                '虚空': [
+                    {'name': '混沌加速', 'slots': 2},
+                    {'name': '虚空供养', 'slots': 2},
+                    {'name': '旧神之子', 'slots': 2}
+                ],
+                '烈日': [
+                    {'name': '伊卡洛斯突进', 'slots': 2},
+                    {'name': '炙热升腾', 'slots': 2},
+                    {'name': '火焰之触', 'slots': 2},
+                    {'name': '地狱火', 'slots': 2}
+                ],
+                '电弧': [
+                    {'name': '电弧之魂', 'slots': 2},
+                    {'name': '闪电激涌', 'slots': 2},
+                    {'name': '电荷思维', 'slots': 2}
+                ],
+                '冰影': [
+                    {'name': '冰焰飞弹', 'slots': 2},
+                    {'name': '冰霜脉冲', 'slots': 2},
+                    {'name': '凄凉观察者', 'slots': 2},
+                    {'name': '冰川收获', 'slots': 2}
+                ],
+                '缚丝': [
+                    {'name': '编织者之唤', 'slots': 2},
+                    {'name': '心纺祷告', 'slots': 2},
+                    {'name': '羁客', 'slots': 2},
+                    {'name': '编制微步', 'slots': 2}
+                ]
+            }
+        };
+
+        const fragmentsDict = {
+            '猎人': {
+                '棱镜': ['恩惠琢面', '牺牲琢面', '奉献琢面', '慷慨琢面', '正义琢面', '荣耀琢面', '希望琢面', '勇气琢面', '平衡琢面', '勇敢琢面', '觉醒琢面', '指挥琢面', '黎明琢面', '保护琢面', '祝福琢面', '使命琢面', '修复琢面', '违抗琢面', '孤独琢面', '毁灭琢面', '统御琢面'],
+                '虚空': ['警惕回声', '休止回声', '驱逐回声', '补能回声', '交换回声', '残存回声', '报复回声', '弱化回声', '坚韧回声', '吸吮回声', '霸道回声', '扩张回声', '失稳回声', '收割回声', '朦胧回声', '饥饿回声'],
+                '烈日': ['仁慈余烬', '决心余烬', '焦然余烬', '仁慈余烬', '光线余烬', '至高天余烬', '燃烧余烬', '火炬余烬', '烧焦余烬', '回火余烬', '起泡余烬', '抚慰余烬', '喷发余烬', '骨灰余烬', '惊奇余烬', '炽热余烬'],
+                '电弧': ['极速火花', '直觉火花', '信标火花', '抗性火花', '动量火花', '震颤火花', '离子火花', '放电火花', '频率火花', '专注火花', '充能火花', '量级火花', '增幅火花', '反馈火花', '伏特火花', '光辉火花'],
+                '冰影': ['晶石之吟', '裂隙之吟', '折角之吟', '耐久之吟', '束缚之吟', '破碎之吟', '锁链的低语', '折磨的低语', '脆弱的低语', '刺激的低语', '传导之吟', '裂解之吟', '饥饿之吟', '韵律之吟', '逆转之吟', '冰冷之吟'],
+                '缚丝': ['思维丝线', '狂怒丝线', '上升丝线', '终局丝线', '守护丝线', '智慧丝线', '重生丝线', '蜕变丝线', '增殖丝线', '进化丝线', '孤立丝线', '束缚丝线', '生成丝线', '持续丝线']
+            },
+            '泰坦': {
+                '棱镜': ['恩惠琢面', '牺牲琢面', '奉献琢面', '慷慨琢面', '正义琢面', '荣耀琢面', '希望琢面', '勇气琢面', '平衡琢面', '勇敢琢面', '觉醒琢面', '指挥琢面', '黎明琢面', '保护琢面', '祝福琢面', '使命琢面', '修复琢面', '违抗琢面', '孤独琢面', '毁灭琢面', '统御琢面'],
+                '虚空': ['警惕回声', '休止回声', '驱逐回声', '补能回声', '交换回声', '残存回声', '报复回声', '弱化回声', '坚韧回声', '吸吮回声', '霸道回声', '扩张回声', '失稳回声', '收割回声', '朦胧回声', '饥饿回声'],
+                '烈日': ['仁慈余烬', '决心余烬', '焦然余烬', '仁慈余烬', '光线余烬', '至高天余烬', '燃烧余烬', '火炬余烬', '烧焦余烬', '回火余烬', '起泡余烬', '抚慰余烬', '喷发余烬', '骨灰余烬', '惊奇余烬', '炽热余烬'],
+                '电弧': ['极速火花', '直觉火花', '信标火花', '抗性火花', '动量火花', '震颤火花', '离子火花', '放电火花', '频率火花', '专注火花', '充能火花', '量级火花', '增幅火花', '反馈火花', '伏特火花', '光辉火花'],
+                '冰影': ['晶石之吟', '裂隙之吟', '折角之吟', '耐久之吟', '束缚之吟', '破碎之吟', '锁链的低语', '折磨的低语', '脆弱的低语', '刺激的低语', '传导之吟', '裂解之吟', '饥饿之吟', '韵律之吟', '逆转之吟', '冰冷之吟'],
+                '缚丝': ['思维丝线', '狂怒丝线', '上升丝线', '终局丝线', '守护丝线', '智慧丝线', '重生丝线', '蜕变丝线', '增殖丝线', '进化丝线', '孤立丝线', '束缚丝线', '生成丝线', '持续丝线']
+            },
+            '术士': {
+                '棱镜': ['恩惠琢面', '牺牲琢面', '奉献琢面', '慷慨琢面', '正义琢面', '荣耀琢面', '希望琢面', '勇气琢面', '平衡琢面', '勇敢琢面', '觉醒琢面', '指挥琢面', '黎明琢面', '保护琢面', '祝福琢面', '使命琢面', '修复琢面', '违抗琢面', '孤独琢面', '毁灭琢面', '统御琢面'],
+                '虚空': ['警惕回声', '休止回声', '驱逐回声', '补能回声', '交换回声', '残存回声', '报复回声', '弱化回声', '坚韧回声', '吸吮回声', '霸道回声', '扩张回声', '失稳回声', '收割回声', '朦胧回声', '饥饿回声'],
+                '烈日': ['仁慈余烬', '决心余烬', '焦然余烬', '仁慈余烬', '光线余烬', '至高天余烬', '燃烧余烬', '火炬余烬', '烧焦余烬', '回火余烬', '起泡余烬', '抚慰余烬', '喷发余烬', '骨灰余烬', '惊奇余烬', '炽热余烬'],
+                '电弧': ['极速火花', '直觉火花', '信标火花', '抗性火花', '动量火花', '震颤火花', '离子火花', '放电火花', '频率火花', '专注火花', '充能火花', '量级火花', '增幅火花', '反馈火花', '伏特火花', '光辉火花'],
+                '冰影': ['晶石之吟', '裂隙之吟', '折角之吟', '耐久之吟', '束缚之吟', '破碎之吟', '锁链的低语', '折磨的低语', '脆弱的低语', '刺激的低语', '传导之吟', '裂解之吟', '饥饿之吟', '韵律之吟', '逆转之吟', '冰冷之吟'],
+                '缚丝': ['思维丝线', '狂怒丝线', '上升丝线', '终局丝线', '守护丝线', '智慧丝线', '重生丝线', '蜕变丝线', '增殖丝线', '进化丝线', '孤立丝线', '束缚丝线', '生成丝线', '持续丝线']
+            }
+        }
+
+        const abilities = {
+            '猎人': {
+                '棱镜': ['赌徒闪身', '射手闪身', '特技闪身'],
+                '虚空': ['赌徒闪身', '射手闪身'],
+                '烈日': ['赌徒闪身', '射手闪身', '特技闪身'],
+                '电弧': ['赌徒闪身', '射手闪身'],
+                '冰影': ['赌徒闪身', '射手闪身'],
+                '缚丝': ['赌徒闪身', '射手闪身']
+            },
+            '泰坦': {
+                '棱镜': ['巍峨屏障', '集结屏障', '推进器'],
+                '虚空': ['巍峨屏障', '集结屏障'],
+                '烈日': ['巍峨屏障', '集结屏障'],
+                '电弧': ['巍峨屏障', '集结屏障', '推进器'],
+                '冰影': ['巍峨屏障', '集结屏障'],
+                '缚丝': ['巍峨屏障', '集结屏障']
+            },
+            '术士': {
+                '棱镜': ['治愈裂痕', '强能裂痕', '凤凰俯冲'],
+                '虚空': ['治愈裂痕', '强能裂痕'],
+                '烈日': ['治愈裂痕', '强能裂痕', '凤凰俯冲'],
+                '电弧': ['治愈裂痕', '强能裂痕'],
+                '冰影': ['治愈裂痕', '强能裂痕'],
+                '缚丝': ['治愈裂痕', '强能裂痕']
+            }
+            // 其他职业...
+        };
+
+        const superAbilities = {
+            '猎人': {
+                '棱镜': ['黄金枪：神枪手', '沉默狂啸', '风暴边缘', '暗影箭矢：狩猎陷阱', '丝线打击'],
+                '虚空': ['暗影箭矢：莫比乌斯箭袋', '暗影箭矢：狩猎陷阱', '鬼灵利刃'],
+                '烈日': ['黄金枪：死亡射击', '黄金枪：神枪手', '利刃弹幕'],
+                '电弧': ['电弧法杖', '风起云涌', '风暴边缘'],
+                '冰影': ['沉默狂啸'],
+                '缚丝': ['丝线打击']
+            },
+            '泰坦': {
+                '棱镜': ['雷霆冲击', '剑刃之怒', '暮光军火', '烈焰战锤', '冰川震击'],
+                '虚空': ['哨兵圣盾', '黎明护罩', '暮光军火'],
+                '烈日': ['烈焰战锤', '燃烧锻锤'],
+                '电弧': ['浩劫之拳', '雷霆冲击'],
+                '冰影': ['冰川震击'],
+                '缚丝': ['剑刃之怒']
+            },
+            '术士': {
+                '棱镜': ['雷霆万钧', '严冬之怒', '烈焰之歌', '新星炸弹：灾变', '织针风暴'],
+                '虚空': ['新星炸弹：涡流', '新星折跃', '新星炸弹：灾变'],
+                '烈日': ['黎明', '光焰之井', '烈焰之歌'],
+                '电弧': ['雷霆万钧', '混沌之触'],
+                '冰影': ['严冬之怒'],
+                '缚丝': ['织针风暴']
+            }
+        }
+
+        const movementSkills = {
+            '猎人': {
+                '棱镜': ['三段跳', '二段跳', '二段控制', '瞬移'],
+                '虚空': ['三段跳', '二段跳', '二段控制'],
+                '烈日': ['三段跳', '二段跳', '二段控制'],
+                '电弧': ['三段跳', '二段跳', '二段控制', '瞬移'],
+                '冰影': ['三段跳', '二段跳', '二段控制'],
+                '缚丝': ['三段跳', '二段跳', '二段控制']
+            },
+            '泰坦': {
+                '棱镜': ['高跳跃升', '专注跃升', '弹射跃升'],
+                '虚空': ['高跳跃升', '专注跃升', '弹射跃升'],
+                '烈日': ['高跳跃升', '专注跃升', '弹射跃升'],
+                '电弧': ['高跳跃升', '专注跃升', '弹射跃升'],
+                '冰影': ['高跳跃升', '专注跃升', '弹射跃升'],
+                '缚丝': ['高跳跃升', '专注跃升', '弹射跃升']
+            },
+            '术士': {
+                '棱镜': ['爆发滑翔', '专注滑翔', '均衡滑翔', '瞬移'],
+                '虚空': ['爆发滑翔', '专注滑翔', '均衡滑翔', '瞬移'],
+                '烈日': ['爆发滑翔', '专注滑翔', '均衡滑翔'],
+                '电弧': ['爆发滑翔', '专注滑翔', '均衡滑翔'],
+                '冰影': ['爆发滑翔', '专注滑翔', '均衡滑翔'],
+                '缚丝': ['爆发滑翔', '专注滑翔', '均衡滑翔']
+            }
+        }
+
+        const meleeSkills = {
+            '猎人': {
+                '棱镜': ['枯萎之刃', '陷阱炸弹', '飞刀戏法', '组合打击', '线织尖刺'],
+                '虚空': ['陷阱炸弹'],
+                '烈日': ['轻质飞刀', '权衡飞刀', '飞刀戏法', '感应爆炸飞刀'],
+                '电弧': ['组合打击', '迷失一击'],
+                '冰影': ['枯萎之刃'],
+                '缚丝': ['线织尖刺']
+            },
+            '泰坦': {
+                '棱镜': ['狂暴利刃', '雷霆一击', '圣盾投掷', '战栗打击', '战锤打击'],
+                '虚空': ['圣盾投掷', '圣盾强袭'],
+                '烈日': ['投掷飞锤', '战锤打击'],
+                '电弧': ['地震打击', '雷霆一击', '弹道猛击'],
+                '冰影': ['战栗打击'],
+                '缚丝': ['狂暴利刃']
+            },
+            '术士': {
+                '棱镜': ['神秘织针', '半影冲击', '口袋奇点', '焚烧响指', '连锁闪电'],
+                '虚空': ['口袋奇点'],
+                '烈日': ['焚烧响指', '星界之火'],
+                '电弧': ['球形闪电', '连锁闪电'],
+                '冰影': ['半影冲击'],
+                '缚丝': ['神秘织针']
+            }
+        }
+
+        const grenadeSkills = {
+            '猎人': {
+                '棱镜': ['磁性手雷','蜂群手雷', '电光手雷', '暮域手雷', '抓钩'],
+                '虚空': ['涡流手雷', '虚空尖刺', '虚空墙壁', '抑制手雷', '散射手雷', '磁性手雷', '量子光束'],
+                '烈日': ['蜂群手雷', '铝热手雷', '燃烧手雷', '烈日手雷', '融合手雷', '烈焰手雷', '治愈手雷', '感应手雷'],
+                '电弧': ['闪光手雷', '电光手雷', '闪电手雷', '风暴手雷', '脉冲手雷', '弹跳手雷', '粘性电浆手雷'],
+                '冰影': ['冰川手雷', '暮域手雷', '急冻手雷'],
+                '缚丝': ['束缚手雷', '抓钩', '线虫手雷']
+            },
+            '泰坦': {
+                '棱镜': ['束缚手雷', '抑制手雷', '铝热手雷', '脉冲手雷', '冰川手雷'],
+                '虚空': ['散射手雷', '虚空尖刺', '虚空墙壁', '抑制手雷', '涡流手雷', '磁性手雷', '量子光束'],
+                '烈日': ['烈日手雷', '治愈手雷', '感应手雷', '铝热手雷', '燃烧手雷', '蜂群手雷', '融合手雷', '烈焰手雷'],
+                '电弧': ['闪光手雷', '风暴手雷', '闪电手雷', '脉冲手雷', '弹跳手雷', '粘性电浆手雷', '电光手雷'],
+                '冰影': ['冰川手雷', '暮域手雷', '急冻手雷'],
+                '缚丝': ['束缚手雷', '抓钩', '线虫手雷']
+            },
+            '术士': {
+                '棱镜': ['线虫手雷', '涡流手雷', '治愈手雷', '风暴手雷', '急冻手雷'],
+                '虚空': ['散射手雷', '虚空尖刺', '虚空墙壁', '抑制手雷', '涡流手雷', '磁性手雷', '量子光束'],
+                '烈日': ['烈日手雷', '治愈手雷', '感应手雷', '铝热手雷', '燃烧手雷', '蜂群手雷', '融合手雷', '烈焰手雷'],
+                '电弧': ['闪光手雷', '风暴手雷', '闪电手雷', '脉冲手雷', '弹跳手雷', '粘性电浆手雷', '电光手雷'],
+                '冰影': ['冰川手雷', '暮域手雷', '急冻手雷'],
+                '缚丝': ['束缚手雷', '抓钩', '线虫手雷']
+            }
+        }
+
+        const randomEntries = [
+            "口齿伶俐: 全程交流使用“oi”来代替",
+            "言出法随: 使用技能时要大声念出技能名称",
+            "畏缩不前: 禁止使用W键",
+            "缩头缩脑: 非必要只能蹲着走",
+            "反唇相讥: 否定他人的每一句话",
+            "加油打气: 称赞他人的每一句话",
+            "头晕目眩：视角/瞄准灵敏度都设置为15",
+            "你不干有的是人干：不击杀任何一只怪",
+            "开摆：只使用蓝装（武器）",
+            "害群之马：本关必须害死一名队友",
+            "内鬼：阻挡队友输出",
+            "各行各业：只能使用方言交流",
+            "滑射达人:攻击前必须先滑行",
+            "对讲机模式：所有人说话结束后要加'完毕/over'",
+            "半身不遂：将键盘的前后键，左右键设置互相对换",
+            "弹药喷射：只能使用白弹武器",
+            "克隆人：抽取一位群友，本轮称呼别人时只能叫该群友的id加被称呼人的#尾号",
+            "瞬移小子：在全局游戏中仅能使用瞬移，随到此词条不可使用无瞬移的职业及分支",
+            "纯净模式：玩家关闭ui后 将护甲幻化换成相同样子"
+        ];
+
+        // 重置功能
+        document.getElementById('resetButton').onclick = function() {
+            selectedCharacter = '';
+            selectedBranch = '';
+            totalSlots = 0;
+            document.getElementById('result').innerHTML = '';
+
+            document.querySelectorAll('.selector').forEach(selector => {
+                selector.style.display = 'none';
+            });
+
+            document.getElementById('characterSelector').style.display = 'block';
+        };
+
+        // 抽取随机词条功能
+        document.getElementById('extractRandomEntry').onclick = function() {
+            const randomEntry = randomEntries[Math.floor(Math.random() * randomEntries.length)];
+            updateResult(`<span style='color: #ffcc00; font-weight: bold;'>${randomEntry}</span>`);
+        };
+        
+        let selectedCharacter = '';
+        let selectedBranch = '';
+        let totalSlots = 0;  // 用于存储插槽总和
+
+        // 重置功能
+        document.getElementById('resetButton').onclick = function() {
+            // 清空选择
+            selectedCharacter = '';
+            selectedBranch = '';
+            totalSlots = 0; // 插槽总和重置
+            document.getElementById('result').innerHTML = ''; // 清空结果显示
+
+            // 隐藏所有选择器
+            document.querySelectorAll('.selector').forEach(selector => {
+                selector.style.display = 'none';
+            });
+
+    // 显示职业选择器
+    document.getElementById('characterSelector').style.display = 'block';
+};
+
+
+        // 显示职业选择器
+        document.getElementById('characterSelector').style.display = 'block';
+
+        document.getElementById('confirmCharacter').onclick = function() {
+            selectedCharacter = document.getElementById('characterSelect').value;
+            updateResult(`选择的职业: ${selectedCharacter}`);
+
+            // 显示分支选择器
+            document.getElementById('branchSelector').style.display = 'block';
+            document.getElementById('characterSelector').style.display = 'none';
+        };
+
+        document.getElementById('confirmBranch').onclick = function() {
+            selectedBranch = document.getElementById('branchSelect').value;
+            updateResult(`选择的分支: ${selectedBranch}`);
+
+            // 显示职业技能选择器
+            document.getElementById('classSkillSelector').style.display = 'block';
+            document.getElementById('branchSelector').style.display = 'none';
+        };
+
+        document.getElementById('selectClassSkill').onclick = function() {
+            const skills = abilities[selectedCharacter][selectedBranch];
+            const randomSkill = skills[Math.floor(Math.random() * skills.length)];
+            updateResult(`选择的职业技能: ${randomSkill}`);
+
+            // 显示超能选择器
+            document.getElementById('superAbilitySelector').style.display = 'block';
+            document.getElementById('classSkillSelector').style.display = 'none';
+        };
+
+        document.getElementById('selectSuperAbility').onclick = function() {
+            // 这里可以添加超能的逻辑
+            const ability = superAbilities[selectedCharacter][selectedBranch];
+            const randomAbility = ability[Math.floor(Math.random() * ability.length)];
+            updateResult(`选择的超能: ${randomAbility}`);
+            // 显示位移技能选择
+            document.getElementById('movementSkillSelector').style.display = 'block';
+            document.getElementById('superAbilitySelector').style.display = 'none';
+        };
+
+        document.getElementById('selectMovementSkill').onclick = function() {
+            // 这里可以添加位移技能的逻辑
+            const movementSkill = movementSkills[selectedCharacter][selectedBranch];
+            const randomSkill = movementSkill[Math.floor(Math.random() * movementSkill.length)];
+            updateResult(`选择的位移技能: ${randomSkill}`);
+            // 显示近战技能选择
+            document.getElementById('meleeSkillSelector').style.display = 'block';
+            document.getElementById('movementSkillSelector').style.display = 'none';
+        };
+
+        document.getElementById('selectMeleeSkill').onclick = function() {
+            // 这里可以添加近战技能的逻辑
+            const meleeSkill = meleeSkills[selectedCharacter][selectedBranch];
+            const randomSkill = meleeSkill[Math.floor(Math.random() * meleeSkill.length)];
+            updateResult(`选择的近战技能: ${randomSkill}`);
+            // 显示手雷技能选择
+            document.getElementById('grenadeSkillSelector').style.display = 'block';
+            document.getElementById('meleeSkillSelector').style.display = 'none';
+        };
+
+        document.getElementById('selectGrenadeSkill').onclick = function() {
+            // 这里可以添加手雷技能的逻辑
+            const grenadeSkill = grenadeSkills[selectedCharacter][selectedBranch];
+            const randomSkill = grenadeSkill[Math.floor(Math.random() * grenadeSkill.length)];
+            updateResult(`选择的手雷技能: ${randomSkill}`);
+            // 显示星相选择
+            updateStarOptions();
+            document.getElementById('starSelector').style.display = 'block';
+            document.getElementById('grenadeSkillSelector').style.display = 'none';
+        };
+
+        function updateStarOptions() {
+            const starDisplay = document.getElementById('starDisplay');
+            starDisplay.innerHTML = ''; // 清空当前内容
+
+            const stars = starDict[selectedCharacter][selectedBranch];
+            stars.forEach(star => {
+                starDisplay.innerHTML += `<div>${star.name} (插槽: ${star.slots})</div>`; // 用 div 显示
+            });
+        }
+
+
+        document.getElementById('selectStar').onclick = function() {
+            const starDisplay = document.getElementById('starDisplay');
+            const starElements = starDisplay.children; // 获取所有显示的星相元素
+            const selectedStars = [];
+
+            // 随机选择两个不同的星相
+            while (selectedStars.length < 2) {
+                const randomIndex = Math.floor(Math.random() * starElements.length);
+                const selectedStar = starElements[randomIndex].textContent.split(' (插槽:')[0]; // 获取星相名称
+
+                // 确保不重复选择
+             if (!selectedStars.includes(selectedStar)) {
+                    selectedStars.push(selectedStar);
+                }
+            }
+
+            const totalSlots = selectedStars.reduce((sum, star) => {
+                const starData = starDict[selectedCharacter][selectedBranch].find(s => s.name === star);
+                return sum + (starData ? starData.slots : 0);
+            }, 0);
+
+            updateResult(`选择的星相: ${selectedStars.join(' 和 ')}，总插槽: ${totalSlots}`);
+
+            // 更新碎片选择
+            updateFragmentOptions(selectedCharacter, selectedBranch, totalSlots);
+            document.getElementById('fragmentSelector').style.display = 'block';
+            document.getElementById('starSelector').style.display = 'none';
+
+            // 禁用星相选择按钮
+            document.getElementById('selectStar').disabled = true;
+        };
+
+
+        function updateFragmentOptions(character, branch, totalSlots) {
+            const fragmentDisplay = document.getElementById('fragmentDisplay');
+            fragmentDisplay.innerHTML = ''; // 清空当前内容
+    
+            const fragments = fragmentsDict[character][branch];
+            const numToSelect = Math.min(totalSlots, fragments.length); // 确保选择的数量不超过可选数量
+
+            // 随机选择碎片
+            const selectedFragments = [];
+            while (selectedFragments.length < numToSelect) {
+                const randomIndex = Math.floor(Math.random() * fragments.length);
+                const selectedFragment = fragments[randomIndex];
+
+             // 确保不重复选择
+                if (!selectedFragments.includes(selectedFragment)) {
+                    selectedFragments.push(selectedFragment);
+                }
+            }
+
+            // 将选择的碎片添加到展示区域
+            selectedFragments.forEach(fragment => {
+                fragmentDisplay.innerHTML += `<div>${fragment}</div>`; // 用 div 显示
+            });
+        }
+
+
+        document.getElementById('selectFragment').onclick = function() {
+            const fragmentDisplay = document.getElementById('fragmentDisplay');
+            const selectedFragments = Array.from(fragmentDisplay.children).map(child => child.textContent);
+            updateResult(`选择的碎片: ${selectedFragments.join(', ')}`);
+
+            document.getElementById('fragmentSelector').style.display = 'none';
+        };
+
+
+        function updateResult(text) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML += `<div>${text}</div>`;
+        }
+
+        // 初始化时显示职业选择
+        document.getElementById('characterSelector').style.display = 'block';
+    </script>
+</body>
+</html>
